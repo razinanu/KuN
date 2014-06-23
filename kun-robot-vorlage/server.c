@@ -33,18 +33,18 @@ void driveCommand(char buf[]) {
 	char* leftPart = strtok(bufCopy, "&");
 //	printf("firstPart is \"%s\"\n", leftPart);
 	char* rightPart =  strtok(NULL, "\n");
-//	printf("firstPart is \"%s\"\n", rightPart);
+	printf("firstPart is \"%s\"\n", rightPart);
 	char* tmp = strtok(leftPart, "=");
 	tmp = strtok(NULL, "\0");
 	double leftVel, rightVel;
 	printf("leftPArt is \"%s\"\n", tmp);
 	leftVel = atof(tmp);
 	printf("leftVel is \"%f\"\n", leftVel);
-	tmp = strtok(rightPart, "=");
-	printf("firstPart is \"%s\"\n", tmp);
-	tmp = strtok(NULL, "\0");
-	rightVel = atof(tmp);
-	printf("leftVel is \"%d\"\n", rightVel);
+	char* tmp2 = strtok(rightPart, "=");
+	tmp2 = strtok(NULL, "\0");
+	printf("rightPart is \"%s\"\n", tmp2);
+	rightVel = atof(tmp2);
+	printf("rightVel is \"%f\"\n", rightVel);
 
 }
 

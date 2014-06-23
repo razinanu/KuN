@@ -19,6 +19,7 @@
 #include <sys/time.h>
 static int sock;
 static char* port;
+double leftVel, rightVel;
 
 #define BUF_SIZ	4096
 ;
@@ -33,19 +34,26 @@ void driveCommand(char buf[]) {
 	char* leftPart = strtok(bufCopy, "&");
 //	printf("firstPart is \"%s\"\n", leftPart);
 	char* rightPart =  strtok(NULL, "\n");
-	printf("firstPart is \"%s\"\n", rightPart);
+//	printf("firstPart is \"%s\"\n", rightPart);
 	char* tmp = strtok(leftPart, "=");
 	tmp = strtok(NULL, "\0");
-	double leftVel, rightVel;
-	printf("leftPArt is \"%s\"\n", tmp);
+
+//	printf("leftPArt is \"%s\"\n", tmp);
 	leftVel = atof(tmp);
 	printf("leftVel is \"%f\"\n", leftVel);
 	char* tmp2 = strtok(rightPart, "=");
 	tmp2 = strtok(NULL, "\0");
-	printf("rightPart is \"%s\"\n", tmp2);
+//	printf("rightPart is \"%s\"\n", tmp2);
 	rightVel = atof(tmp2);
 	printf("rightVel is \"%f\"\n", rightVel);
-
+	if (leftVel > 1.0 || rightVel > 1.0)
+		{
+			 printf("invalid Velocity: (%1.1f, %1.1f) \n", leftVel, rightVel);
+			 leftVel = 0.0;
+			 rightVel = 0.0;
+		}
+	 setRobSpeed(leftVel, rightVel);
+	 printf("speed left: %1.1f  right: %1.1f \n", leftVel, rightVel);
 }
 
 int getTheCommand(int s) {

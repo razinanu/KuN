@@ -25,6 +25,33 @@ double leftVel, rightVel;
 ;
 int getTheCommand();
 void driveCommmand();
+void imageCommand();
+int send_banner();
+int send_banner(int s, int ok)
+{
+    int bytes;
+    char header[] =	{ "HTTP/1.0 200 OK\r\n\r\n" };
+    char headerNotFound[] =	{ "HTTP/1.0 404 NOT FOUND\r\n\r\n" };
+
+    if (ok)
+    {
+    	bytes = send(s, header, strlen(header), 0);
+    	printf("ok!\n");
+    }
+    else
+    {
+    	bytes = send(s, headerNotFound, strlen(headerNotFound), 0);
+    }
+
+    if (bytes == -1)
+    {
+        printf("send() in send_banner() failed\n");
+        return 1;
+    }
+
+    return 0;
+
+}
 
 void driveCommand(char buf[]) {
 
@@ -55,6 +82,17 @@ void driveCommand(char buf[]) {
 	 setRobSpeed(leftVel, rightVel);
 	 printf("speed left: %1.1f  right: %1.1f \n", leftVel, rightVel);
 }
+void imageCommand(int sock)
+{
+	char* image;
+	int size;
+
+	getRobCamImage(&image,&size);
+	send_banner(sock,1);
+
+	write(sock,image,size);
+	printf("image \n");
+}
 
 int getTheCommand(int s) {
 
@@ -71,10 +109,24 @@ int getTheCommand(int s) {
 
 	printf("Banner is \"%s\"\n", buf);
 	if (strstr(buf, "drive")) {
-		printf("Command Drive recieved!\n");
+		printf("Command Drive received!\n");
 		driveCommand(buf);
 
 	}
+	   if (strstr(buf, "image"))
+	    {
+
+		   printf("Command Image received!\n");
+		   imageCommand(s);
+	    }
+	   else
+	    {
+	    	perror("invalid command!");
+	    	printf("buf is: %s\n", buf);
+
+	    	send_banner(sock,1);
+	    }
+
 
 	return 0;
 
@@ -165,4 +217,3 @@ int main(int argc, char* argv[]) {
 
 	return (0);
 }
-

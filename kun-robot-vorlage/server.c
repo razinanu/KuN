@@ -19,7 +19,6 @@
 #include <sys/time.h>
 static int sock;
 static char* port;
-double leftVel, rightVel;
 
 #define BUF_SIZ	4096
 ;
@@ -27,70 +26,91 @@ int getTheCommand();
 void driveCommmand();
 void imageCommand();
 int send_banner();
-int send_banner(int s, int ok)
-{
-    int bytes;
-    char header[] =	{ "HTTP/1.0 200 OK\r\n\r\n" };
-    char headerNotFound[] =	{ "HTTP/1.0 404 NOT FOUND\r\n\r\n" };
+void searchString();
+void searchString(char buf[], double leftVel, double rightVel) {
+	if (strstr(buf, "left")) {
+		char* tmp = strtok(buf, "=");
+		tmp = strtok(NULL, "\0");
+		leftVel = atof(tmp);
+		printf("leftvel is \"%s\"\n", leftVel);
+	}
+	if (strstr(buf, "right")) {
+		char* tmp2 = strtok(buf, "=");
+		tmp2 = strtok(NULL, "\0");
+		rightVel = atof(tmp2);
+		printf("rightVel is \"%f\"\n", rightVel);
+	}
 
-    if (ok)
-    {
-    	bytes = send(s, header, strlen(header), 0);
-    	printf("ok!\n");
-    }
-    else
-    {
-    	bytes = send(s, headerNotFound, strlen(headerNotFound), 0);
-    }
+}
+int send_banner(int s, int ok) {
+	int bytes;
+	char header[] = { "HTTP/1.0 200 OK\r\n\r\n" };
+	char headerNotFound[] = { "HTTP/1.0 404 NOT FOUND\r\n\r\n" };
 
-    if (bytes == -1)
-    {
-        printf("send() in send_banner() failed\n");
-        return 1;
-    }
+	if (ok) {
+		bytes = send(s, header, strlen(header), 0);
+		printf("ok!\n");
+	} else {
+		bytes = send(s, headerNotFound, strlen(headerNotFound), 0);
+	}
 
-    return 0;
+	if (bytes == -1) {
+		printf("send() in send_banner() failed\n");
+		return 1;
+	}
+
+	return 0;
 
 }
 
 void driveCommand(char buf[]) {
 
 	char bufCopy[BUF_SIZ];
-	printf("buf is \"%s\"\n", buf);
+	double leftVel = 0.0;
+	double rightVel = 0.0;
 	strcpy(bufCopy, buf);
-	char* leftPart = strtok(bufCopy, "&");
-//	printf("firstPart is \"%s\"\n", leftPart);
-	char* rightPart =  strtok(NULL, "\n");
-//	printf("firstPart is \"%s\"\n", rightPart);
-	char* tmp = strtok(leftPart, "=");
-	tmp = strtok(NULL, "\0");
+	char* command;
+	char* command_end;
+	command = strtok_r(bufCopy, "& ", &command_end);
 
-//	printf("leftPArt is \"%s\"\n", tmp);
-	leftVel = atof(tmp);
-	printf("leftVel is \"%f\"\n", leftVel);
-	char* tmp2 = strtok(rightPart, "=");
-	tmp2 = strtok(NULL, "\0");
-//	printf("rightPart is \"%s\"\n", tmp2);
-	rightVel = atof(tmp2);
-	printf("rightVel is \"%f\"\n", rightVel);
-	if (leftVel > 1.0 || rightVel > 1.0)
-		{
-			 printf("invalid Velocity: (%1.1f, %1.1f) \n", leftVel, rightVel);
-			 leftVel = 0.0;
-			 rightVel = 0.0;
+	float speedLeft = 0.0;
+	float speedRight = 0.0;
+
+	//ueber Paramter iterieren
+	while (command != NULL) {
+		char* value_end;
+		char* value = strtok_r(command, "=", &value_end);
+
+//	        puts(command);
+		printf("command is  %s \n", command);
+
+		if (strcmp(command, "left") == 0) {
+			value = strtok_r(NULL, "=", &value_end);
+			printf("ValueLeft %s \n", value);
+			speedLeft = atof(value);
+			printf("left: %f", speedLeft);
+		} else if (strcmp(command, "right") == 0) {
+
+			value = strtok_r(NULL, "=", &value_end);
+
+			speedRight = atof(value);
+			printf("right: %f \n", speedRight);
 		}
-	 setRobSpeed(leftVel, rightVel);
-	 printf("speed left: %1.1f  right: %1.1f \n", leftVel, rightVel);
+
+		command = strtok_r(NULL, "& ", &command_end);
+	}
+//
+	printf("left: %f, right: %f", speedLeft, speedRight);
+	setRobSpeed(speedLeft, speedRight);
 }
-void imageCommand(int sock)
-{
+void imageCommand(int sock) {
 	char* image;
 	int size;
 
-	getRobCamImage(&image,&size);
-	send_banner(sock,1);
+	getRobCamImage(&image, &size);
+	send_banner(sock, 1);
 
-	write(sock,image,size);
+	write(sock, image, size);
 	printf("image \n");
 }
 
@@ -98,6 +118,10 @@ int getTheCommand(int s) {
 
 	char buf[BUF_SIZ];
 	int bytes;
+	int i;
+	for (i = 0; i < BUF_SIZ - 1; i++) {
+		buf[i] = '\0';
+	}
 //	     Empfang die Daten von einem Socket
 	bytes = recv(s, buf, sizeof(buf) - 1, 0);
 	if (bytes == -1) {
@@ -108,25 +132,24 @@ int getTheCommand(int s) {
 	buf[bytes] = '\0';
 
 	printf("Banner is \"%s\"\n", buf);
+
+//	printf("Banner is \"%s\"\n", strstr(buf, "drive"));
 	if (strstr(buf, "drive")) {
 		printf("Command Drive received!\n");
 		driveCommand(buf);
 
 	}
-	   if (strstr(buf, "image"))
-	    {
+	if (strstr(buf, "image")) {
 
-		   printf("Command Image received!\n");
-		   imageCommand(s);
-	    }
-	   else
-	    {
-	    	perror("invalid command!");
-	    	printf("buf is: %s\n", buf);
+		printf("Command Image received!\n");
+		imageCommand(s);
+	} else {
+		perror("invalid command!");
+		//printf("buf is: %s\n", buf);
 
-	    	send_banner(sock,1);
-	    }
-
+		//send_banner(sock, 1);
+		return 0;
+	}
 
 	return 0;
 
